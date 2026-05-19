@@ -5,7 +5,7 @@ from PIL import Image
 st.set_page_config(page_title="검침표 자동 추출", layout="centered")
 st.title("수도 및 전기 검침표 자동 추출기")
 
-# 웹사이트 화면에 있던 키 입력란을 지우고, 서버에 숨겨둔 키를 자동으로 불러옵니다.
+# 서버에 숨겨둔 API 키를 자동으로 불러옵니다.
 api_key = st.secrets["API_KEY"]
 
 # 메인 화면 사진 업로드
@@ -20,7 +20,8 @@ if uploaded_file is not None:
         model = genai.GenerativeModel("gemini-2.5-flash")
         
         with st.spinner("사진을 분석하고 있습니다..."):
-            prompt = "이 사진은 건물 검침표야. 표 안의 데이터를 추출해서 쉼표로 구분된 CSV 형식 텍스트로만 정확하게 출력해줘. 다른 설명은 하지 마."
+            # 호실과 가장 최근 검침값만 특정하여 추출하도록 지시
+            prompt = "이 사진은 건물 검침표야. 표에서 첫 번째 열(호실 번호)과 맨 오른쪽 열(가장 최근 검침값) 딱 두 가지만 추출해. 결과는 호실,최근검침값 형태로 쉼표로 구분된 CSV 형식으로 출력하고 다른 설명은 절대 하지 마."
             
             try:
                 response = model.generate_content([prompt, image])
@@ -29,10 +30,11 @@ if uploaded_file is not None:
                 st.success("추출 완료")
                 st.text_area("추출된 데이터 미리보기", value=extracted_text, height=200)
                 
+                # utf-8-sig 적용으로 엑셀 한글 깨짐 방지
                 st.download_button(
                     label="엑셀용 CSV 파일 다운로드",
                     data=extracted_text.encode("utf-8-sig"),
-                    file_name="검침표_추출결과.csv",
+                    file_name="검침표_최근값_추출결과.csv",
                     mime="text/csv"
                 )
             except Exception as e:
