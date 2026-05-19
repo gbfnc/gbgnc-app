@@ -60,7 +60,7 @@ if uploaded_file is not None:
     if st.button("AI 정밀 분석 시작", use_container_width=True):
         genai.configure(api_key=api_key)
         # 최신 2.5 Pro 모델로 수정 완료
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         
         with st.spinner("GB F&C 데이터 정밀 분석 중..."):
             prompt = """이 사진은 건물 검침표입니다.
