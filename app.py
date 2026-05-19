@@ -17,7 +17,7 @@ if uploaded_file is not None and api_key:
     
     if st.button("표 데이터 추출 시작"):
         genai.configure(api_key=api_key)
-        # 제미나이 1.5 플래시 모델 사용
+        # 제미나이 2.5 플래시 모델 사용
         model = genai.GenerativeModel("gemini-2.5-flash")
         
         with st.spinner("사진을 분석하고 있습니다..."):
@@ -30,10 +30,10 @@ if uploaded_file is not None and api_key:
                 st.success("추출 완료")
                 st.text_area("추출된 데이터 미리보기", value=extracted_text, height=200)
                 
-                # 결과를 CSV 파일로 다운로드할 수 있도록 버튼 생성
+                # utf-8-sig 인코딩을 적용하여 엑셀에서 한글 깨짐 방지
                 st.download_button(
                     label="엑셀용 CSV 파일 다운로드",
-                    data=extracted_text,
+                    data=extracted_text.encode("utf-8-sig"),
                     file_name="검침표_추출결과.csv",
                     mime="text/csv"
                 )
