@@ -5,10 +5,8 @@ from PIL import Image
 st.set_page_config(page_title="검침표 자동 추출", layout="centered")
 st.title("수도 및 전기 검침표 자동 추출기")
 
-# 서버에 숨겨둔 API 키를 자동으로 불러옵니다.
 api_key = st.secrets["API_KEY"]
 
-# 메인 화면 사진 업로드
 uploaded_file = st.file_uploader("검침표 사진 업로드 (JPG, PNG)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
@@ -20,8 +18,15 @@ if uploaded_file is not None:
         model = genai.GenerativeModel("gemini-2.5-flash")
         
         with st.spinner("사진을 분석하고 있습니다..."):
-            # 호실과 가장 최근 검침값만 특정하여 추출하도록 지시
-            prompt = "이 사진은 건물 검침표야. 표에서 첫 번째 열(호실 번호)과 맨 오른쪽 열(가장 최근 검침값) 딱 두 가지만 추출해. 결과는 호실,최근검침값 형태로 쉼표로 구분된 CSV 형식으로 출력하고 다른 설명은 절대 하지 마."
+            # 가로줄 인식을 강제하고 중간 데이터를 완전히 무시하도록 지시사항 강화
+            prompt = """이 사진은 건물 검침표 이미지입니다. 
+            데이터가 옆으로 밀리거나 어긋나지 않도록 각 가로줄(행)을 독립적으로 인식하는 것이 가장 중요합니다.
+            
+            1. 각 가로줄의 맨 왼쪽에서 3자리 또는 4자리의 호실 번호를 찾으세요.
+            2. 해당 호실과 가로로 일직선 상에 위치한 맨 오른쪽 끝의 숫자(가장 최근 검침값)만 찾으세요.
+            3. 중간에 있는 8개월치 과거 데이터나 빈칸은 시각적으로 완전히 무시하세요.
+            
+            결과는 호실,최근검침값 형태의 쉼표로 구분된 CSV로만 출력하고 다른 설명은 절대 추가하지 마세요."""
             
             try:
                 response = model.generate_content([prompt, image])
@@ -30,7 +35,6 @@ if uploaded_file is not None:
                 st.success("추출 완료")
                 st.text_area("추출된 데이터 미리보기", value=extracted_text, height=200)
                 
-                # utf-8-sig 적용으로 엑셀 한글 깨짐 방지
                 st.download_button(
                     label="엑셀용 CSV 파일 다운로드",
                     data=extracted_text.encode("utf-8-sig"),
