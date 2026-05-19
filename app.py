@@ -4,21 +4,64 @@ from PIL import Image
 import pandas as pd
 import json
 
-st.set_page_config(page_title="검침표 자동 추출", layout="centered")
-st.title("수도 및 전기 검침표 자동 추출기")
+# 페이지 기본 설정
+st.set_page_config(page_title="GB F&C 검침표 자동 추출", layout="centered")
+
+# 대시보드 스타일 지정을 위한 선언
+st.markdown("""
+    <style>
+    .main-header {
+        background-color: #1E3A8A;
+        padding: 25px;
+        border-radius: 8px;
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .company-tag {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        margin-bottom: 5px;
+        color: #93C5FD;
+    }
+    .system-title {
+        font-size: 26px;
+        font-weight: bold;
+        margin: 0;
+    }
+    .info-box {
+        background-color: #F3F4F6;
+        padding: 15px;
+        border-radius: 6px;
+        border-left: 5px solid #1E3A8A;
+        margin-bottom: 20px;
+    }
+    </style>
+    
+    <div class="main-header">
+        <div class="company-tag">GB F&C PROPERTY MANAGEMENT</div>
+        <div class="system-title">수도 · 전기 검침 데이터 자동 추출 시스템</div>
+    </div>
+    
+    <div class="info-box">
+        <strong>사용 안내:</strong> 현장에서 촬영한 검침표 사진을 업로드하면 최신 검침값만 자동으로 추출됩니다. 분석 완료 후 표 데이터를 복사하여 관리비 정산 엑셀에 붙여넣으세요.
+    </div>
+""", unsafe_allow_html=True)
 
 api_key = st.secrets["API_KEY"]
-uploaded_file = st.file_uploader("검침표 사진 업로드 (JPG, PNG)", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("검침표 사진 등록 (JPG, PNG)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="업로드된 사진", use_container_width=True)
+    st.image(image, caption="등록된 검침표 이미지", use_container_width=True)
     
-    if st.button("표 데이터 추출 시작"):
+    if st.button("AI 정밀 분석 시작", use_container_width=True):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-1.5-pro")
         
-        with st.spinner("정밀 분석 중입니다..."):
+        with st.spinner("GB F&C 데이터 정밀 분석 중..."):
             prompt = """이 사진은 건물 검침표입니다.
             각 가로줄에서 맨 왼쪽 호실 번호와 맨 오른쪽 최근 검침값만 짝지어 추출하세요.
             결과는 다른 설명 없이 오직 아래와 같은 JSON 배열 형태로만 출력하세요.
@@ -41,19 +84,18 @@ if uploaded_file is not None:
                 data = json.loads(raw_text)
                 df = pd.DataFrame(data)
                 
-                st.success("추출 완료")
+                st.markdown("### 📊 추출 결과 확인")
                 
-                # 1. 화면에서 마우스 드래그로 복사 가능한 표 시각화
-                st.subheader("1. 추출된 데이터 표")
+                # 결과 시각화 및 편집 가능한 표 제공
                 st.data_editor(df, use_container_width=True)
                 
-                # 2. 엑셀 붙여넣기 전용 텍스트 창 (탭으로 구분되어 그대로 붙여넣으면 칸이 나눠짐)
-                st.subheader("2. 엑셀 붙여넣기용 텍스트")
+                # 엑셀 붙여넣기 전용 텍스트 영역
+                st.markdown("### 📋 엑셀 복사 전용 데이터")
                 tsv_text = "호실\t최근검침값\n" + "\n".join([f"{row['호실']}\t{row['최근검침값']}" for index, row in df.iterrows()])
-                st.text_area("아래 상자 안을 클릭 후 전체 선택(Ctrl+A)하여 복사(Ctrl+C)한 뒤, 엑셀에 바로 붙여넣으세요.", value=tsv_text, height=300)
+                st.text_area("아래 상자를 클릭하고 전체 선택(Ctrl+A) 후 복사(Ctrl+C)하여 엑셀에 바로 붙여넣으십시오.", value=tsv_text, height=250)
                 
             except json.JSONDecodeError:
-                st.error("데이터 변환 실패. 사진을 다시 확인해 주세요.")
-                st.text_area("AI 원본 결과", value=raw_text)
+                st.error("데이터 변환에 실패했습니다. 사진 상태를 확인하고 다시 시도해 주십시오.")
+                st.text_area("AI 원본 답변 데이터", value=raw_text)
             except Exception as e:
-                st.error(f"오류 발생: {e}")
+                st.error(f"시스템 오류 발생: {e}")
